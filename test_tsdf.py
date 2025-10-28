@@ -426,7 +426,7 @@ def main():
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         print("用法示例：")
-        print("  python check_tsdf_quality.py --npz tsdf_grid.npz --pcd ManualFilteredPointCloud.ply")
+        print("  python test_tsdf.py --npz tsdf_grid.npz --pcd ManualFilteredPointCloud.ply")
         print("可用参数：--band 0.01 --samples 20000 --delta 0.01")
     else:
         main()

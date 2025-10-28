@@ -19,39 +19,79 @@ def load_point_cloud(path: str):
     return pcd
 
 
-def preprocess_point_cloud(pcd: o3d.geometry.PointCloud,
-                           downsample_voxel: float = 0.0,
-                           nb_neighbors: int = 24,
-                           std_ratio: float = 2.0,
-                           normal_radius: float = 0.01,
-                           normal_max_nn: int = 50,
-                           orient_consistent_k: int = 50,
-                           orient_camera: list = None):
+def preprocess_point_cloud(
+    pcd,
+    voxel_downsample,
+    nb_neighbors,
+    std_ratio,
+    normal_radius,
+    normal_max_nn,
+    orient_consistent_k,
+    orient_camera,
+):
     """
-    - 体素下采样（可选）
-    - 统计滤波去噪
-    - 法向估计 + 一致化（两种方式：一致切平面 or 朝向相机）
+    点云预处理：
+    1. 体素下采样
+    2. 统计滤波去掉离群点
+    3. 估计法向
+    4. 法向朝外一致化
+    5. 法向切平面一致化（全局平滑）
     """
-    pcd_proc = pcd
-    if downsample_voxel and downsample_voxel > 0:
-        pcd_proc = pcd_proc.voxel_down_sample(voxel_size=downsample_voxel)
 
-    # 去噪（统计滤波）
-    pcd_proc, _ = pcd_proc.remove_statistical_outlier(nb_neighbors=nb_neighbors, std_ratio=std_ratio)
-
-    # 法向估计
-    pcd_proc.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=normal_radius, max_nn=normal_max_nn))
-
-    # 法向一致化
-    if orient_camera is not None:
-        pcd_proc.orient_normals_towards_camera_location(orient_camera)
+    # 1) 体素下采样（如果 voxel_downsample>0）
+    if voxel_downsample is not None and voxel_downsample > 0:
+        pcd_proc = pcd.voxel_down_sample(voxel_downsample)
     else:
-        try:
-            pcd_proc.orient_normals_consistent_tangent_plane(orient_consistent_k)
-        except Exception:
-            pass  # 某些版本不支持则忽略
+        pcd_proc = pcd.clone()
 
-    pcd_proc.normalize_normals()
+    # 2) 统计滤波 (去除孤立点 / 噪声)
+    #    注意：StatisticalOutlierRemoval 返回的是 (filtered_pcd, indices)
+    try:
+        pcd_proc, _ = pcd_proc.remove_statistical_outlier(
+            nb_neighbors=nb_neighbors,
+            std_ratio=std_ratio,
+        )
+    except Exception as e:
+        print(f"[WARN] 统计滤波失败，继续不滤波: {e}")
+
+    # 3) 估计法向
+    pcd_proc.estimate_normals(
+        search_param=o3d.geometry.KDTreeSearchParamHybrid(
+            radius=normal_radius,
+            max_nn=normal_max_nn,
+        )
+    )
+
+    # 4) 统一法向朝向
+    # orient_camera 可以是：
+    #   - True: 我们自动猜一个“相机位置”
+    #   - False/None: 不做这个步骤
+    #   - [x,y,z] / np.array(3,): 用这个坐标当相机位置
+    if orient_camera is not None and orient_camera is not False:
+        if orient_camera is True:
+            # 自动猜相机：点云质心往 +Z 外推 20 cm
+            pts_np = np.asarray(pcd_proc.points)
+            center = pts_np.mean(axis=0)
+            cam_loc = center + np.array([0.0, 0.0, 0.20], dtype=np.float64)
+        else:
+            cam_loc = np.asarray(orient_camera, dtype=np.float64)
+
+        try:
+            pcd_proc.orient_normals_towards_camera_location(cam_loc)
+        except TypeError as e:
+            # 某些 open3d 版本要求 cam_loc 形状是 (3,) float64
+            print(f"[WARN] orient_normals_towards_camera_location 形状不兼容: {e}")
+            cam_loc = cam_loc.reshape(3,)
+            pcd_proc.orient_normals_towards_camera_location(cam_loc)
+
+    # 5) 全局法向一致化（切平面一致化 / smoothing）
+    # 有的 open3d 版本没有这个API，或者 k 太大可能报错，所以 try/except
+    if orient_consistent_k is not None and orient_consistent_k > 0:
+        try:
+            pcd_proc.orient_normals_consistent_tangent_plane(k=int(orient_consistent_k))
+        except Exception as e:
+            print(f"[WARN] orient_normals_consistent_tangent_plane 失败，跳过: {e}")
+
     return pcd_proc
 
 
@@ -236,17 +276,17 @@ PARAMS = dict(
     input_path="ManualFilteredPointCloud.ply",  # 输入点云
     output_path="tsdf_grid.npz",                # 输出 npz
     voxel_size=0.005,                           # 体素米
-    trunc_margin=0.01,                          # 截断距离米
+    trunc_margin=0.020,                          # 截断距离米
     grid_pad=0.02,                              # 外扩边界米
-    downsample_voxel=0.003,                     # 下采样米（0 关闭）
+    voxel_downsample=0.003,                     # 下采样米（0 关闭）
     nb_neighbors=24,
     std_ratio=2.0,
-    normal_radius=0.01,
-    normal_max_nn=50,
+    normal_radius=0.04,
+    normal_max_nn=100,
     orient_k=50,
-    orient_camera=None,                         # 例如 [0,0,0]；None 用一致切平面
+    orient_camera=True,                         # 例如 [0,0,0]；None 用一致切平面
     smooth=1,                                   # 高斯平滑迭代（需 SciPy）
-    smooth_sigma_vox=0.75,                      # 以体素为单位
+    smooth_sigma_vox=0.5,                      # 以体素为单位
     verbose=False                               # True 才会打印进度与信息
 )
 
@@ -255,7 +295,7 @@ def _run_from_params(p):
     pcd = load_point_cloud(p["input_path"])
     pcdp = preprocess_point_cloud(
         pcd,
-        downsample_voxel=p["downsample_voxel"],
+        voxel_downsample=p["voxel_downsample"],
         nb_neighbors=p["nb_neighbors"],
         std_ratio=p["std_ratio"],
         normal_radius=p["normal_radius"],

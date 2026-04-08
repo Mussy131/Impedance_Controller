@@ -1,0 +1,68 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Enabled: true
+      Name: Grid
+      Plane: XY
+      Reference Frame: <Fixed Frame>
+      Cell Size: 1
+      Plane Cell Count: 20
+      Color: 160; 160; 164
+      Alpha: 0.4
+    - Class: rviz_default_plugins/RobotModel
+      Enabled: true
+      Name: RobotModel
+      Description Source: Topic
+      Description Topic:
+        Value: /robot_description
+      Visual Enabled: true
+      Collision Enabled: false
+      TF Prefix: ""
+      Update Interval: 0
+      Alpha: 1
+    - Class: rviz_default_plugins/TF
+      Enabled: false
+      Name: TF
+      Marker Scale: 0.6
+      Show Arrows: true
+      Show Axes: true
+      Show Names: false
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: SurfaceDebugMarkers
+      Topic:
+        Value: /surface_impedance_controller/debug_markers
+      Queue Size: 100
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: fer_link0
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Name: Current View
+      Target Frame: <Fixed Frame>
+      Distance: 2.5
+      Focal Point:
+        X: 0.45
+        Y: 0.0
+        Z: 0.2
+      Pitch: 0.55
+      Yaw: 1.2
+      Near Clip Distance: 0.01
+Window Geometry:
+  Width: 1600
+  Height: 900

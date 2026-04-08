@@ -1,0 +1,10 @@
+<library path="franka_surface_impedance_controller">
+  <class
+    name="franka_surface_impedance_controller/SurfaceImpedanceController"
+    type="franka_surface_impedance_controller::SurfaceImpedanceController"
+    base_class_type="controller_interface::ControllerInterface">
+    <description>
+      Surface impedance controller plugin (ROS 2 ros2_control).
+    </description>
+  </class>
+</library>

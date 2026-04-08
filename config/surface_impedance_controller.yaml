@@ -1,0 +1,135 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 1000  # Hz
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    franka_robot_state_broadcaster:
+      type: franka_robot_state_broadcaster/FrankaRobotStateBroadcaster
+
+    surface_impedance_controller:
+      type: franka_surface_impedance_controller/SurfaceImpedanceController
+
+surface_impedance_controller:
+  ros__parameters:
+    control:
+      mode: paper_surface_scan
+
+    arm_id: fer
+    use_franka_semantic: false
+    urdf_path: /tmp/fer.urdf
+    base_link: fer_link0
+    ee_link: fer_hand_tcp
+    joint_names:
+      - fer_joint1
+      - fer_joint2
+      - fer_joint3
+      - fer_joint4
+      - fer_joint5
+      - fer_joint6
+      - fer_joint7
+
+    debug:
+      publish_state: true
+      publish_markers: true
+      publish_rate_hz: 100.0
+
+    debug_joint_pd_mode: false
+
+    impedance:
+      k_trans: 300.0
+      d_trans: 40.0
+      k_rot: 36.0
+      d_rot: 8.0
+
+    joint_damping: 0.2
+
+    scan:
+      track_generator: paper_surface_lissajous
+      theta_center: 0.0
+      theta_min: -1.50
+      theta_max: 1.50
+      theta_smooth_turnaround: true
+      phi_center: 0.60
+      phi_min: 0.25
+      phi_max: 1.00
+      theta_freq: 0.009
+      surface_lissajous:
+        amplitude: [0.032, 0.024]
+        omega: [0.30, 0.40]
+        phase: [0.0, 0.0]
+        offset: [0.0, 0.0]
+      lock_lissajous_mapping: true
+      reset_time_on_activate: true
+      ramp_time: 0.0
+      phase_speed_scale: 1.0
+      max_linear_speed: 0.030
+      max_angular_speed: 0.35
+      acquire_max_linear_speed: 0.055
+      acquire_max_angular_speed: 0.45
+      acquire_release_surface_tol: 0.018
+      acquire_reacquire_surface_tol: 0.030
+      acquire_reacquire_surface_time: 0.12
+      acquire_release_band_tol: 0.22
+      acquire_reacquire_band_tol: 0.40
+      acquire_hover_surface_offset: 0.008
+      acquire_recovery_height_margin: 0.025
+      acquire_recovery_max_angular_speed: 0.18
+      max_position_error: 0.012
+      max_radial_error: 0.008
+      max_tangential_error: 0.012
+      max_orientation_error: 0.30
+      progress_gate: true
+      progress_pos_tol: 0.012
+      progress_ori_tol: 0.25
+      progress_band_tol: 0.18
+      progress_hard_stop_pos_tol: 0.025
+      progress_hard_stop_band_tol: 0.35
+      progress_hard_stop_ori_tol: 0.55
+      progress_hard_stop_surface_dist_tol: 0.028
+      progress_cruise_min_scale: 0.0
+      progress_cruise_quality_threshold: 0.92
+      progress_hard_stop_surface_reacquire_time: 0.12
+      progress_hard_stop_reacquire_time: 0.50
+      tool_axis_local: [0.0, 0.0, 1.0]
+      align_inward_normal: true
+      hold_current_roll: false
+      auto_pick_tool_axis_on_activate: false
+      seed_from_current_on_activate: false
+      seed_blend_time: 0.0
+      min_height_above_base: 0.05
+
+    outer:
+      d_des: -0.005
+      k_outer_pos: 0.3
+
+    paper:
+      k_d: 200.0
+      d_d: 40.0
+      k_s: [150.0, 150.0]
+      d_s: [28.0, 28.0]
+      k_eps: 36.0
+      d_eps: 8.0
+      d_max: 0.06
+
+    nullspace:
+      enable: true
+      kp: 8.0
+      kd: 1.5
+      damping: 0.02
+
+    safety:
+      max_tau: 50.0
+      max_tau_rate: 40.0
+      switch_protection:
+        enable: true
+        hold_time: 0.5
+        blend_time: 1.0
+
+    surface:
+      type: hemisphere
+      hemisphere:
+        center: [0.55, 0.0, 0.02]
+        radius: 0.10
+        axis: [0.0, 0.0, 1.0]

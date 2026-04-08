@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>franka_surface_impedance_controller</name>
+  <version>0.2.0</version>
+  <description>Surface impedance controller for Franka robots (ROS 2 port). Simplified surface model supports a hemisphere CAD replacement.</description>
+
+  <maintainer email="hchen82@student.ubc.ca">Huiyu Chen</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclcpp_lifecycle</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>controller_interface</depend>
+  <depend>hardware_interface</depend>
+  <depend>pluginlib</depend>
+
+  <depend>franka_hardware</depend>
+  <depend>franka_semantic_components</depend>
+  <depend>franka_msgs</depend>
+
+  <depend>orocos_kdl</depend>
+  <depend>kdl_parser</depend>
+  <depend>urdf</depend>
+
+  <!-- Best practice in ROS 2: use eigen3_cmake_module + find_package(Eigen3) in CMake -->
+  <build_depend>eigen3_cmake_module</build_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <controller_interface plugin="franka_surface_impedance_controller_plugin.xml"/>
+  </export>
+</package>

@@ -1,0 +1,131 @@
+surface_impedance_controller:
+  ros__parameters:
+    arm_id: fer
+    use_franka_semantic: false
+    urdf_path: /tmp/fer.urdf
+    base_link: fer_link0
+    ee_link: fer_hand_tcp  # use TCP when hand/gripper is loaded
+
+    joint_names:
+      - fer_joint1
+      - fer_joint2
+      - fer_joint3
+      - fer_joint4
+      - fer_joint5
+      - fer_joint6
+      - fer_joint7
+
+    debug_joint_pd_mode: false
+    debug:
+      publish_markers: true
+      publish_state: true
+      publish_rate_hz: 60.0
+
+    control:
+      mode: paper_surface_scan
+
+    scan:
+      track_generator: paper_surface_lissajous
+      theta_center: 0.0
+      theta_amp: 0.18
+      theta_freq: 0.009
+      theta_phase: 0.0
+      theta_orbit: true
+      theta_smooth_turnaround: true
+      theta_min: -1.50
+      theta_max: 1.50
+      surface_lissajous:
+        amplitude: [0.030, 0.024]
+        omega: [0.18, 0.24]
+        phase: [0.0, 0.0]
+        offset: [0.0, 0.0]
+      phi_center: 0.45
+      phi_amp: 0.0
+      phi_freq: 0.0128
+      phi_phase: 1.57
+      phi_min: 0.28
+      phi_max: 0.70
+      reset_time_on_activate: true
+      lock_lissajous_mapping: true
+      ramp_time: 0.0
+      phase_speed_scale: 1.0
+      max_linear_speed: 0.025
+      max_angular_speed: 0.28
+      acquire_max_linear_speed: 0.08
+      acquire_max_angular_speed: 0.50
+      acquire_release_surface_tol: 0.020
+      acquire_reacquire_surface_tol: 0.035
+      acquire_reacquire_surface_time: 0.15
+      acquire_release_band_tol: 0.25
+      acquire_reacquire_band_tol: 0.45
+      acquire_hover_surface_offset: 0.008
+      acquire_recovery_height_margin: 0.020
+      acquire_recovery_max_angular_speed: 0.20
+      max_position_error: 0.015
+      max_radial_error: 0.010
+      max_tangential_error: 0.015
+      max_orientation_error: 0.22
+      progress_gate: true
+      progress_pos_tol: 0.012
+      progress_ori_tol: 0.20
+      progress_band_tol: 0.30
+      progress_hard_stop_pos_tol: 0.025
+      progress_hard_stop_band_tol: 0.55
+      progress_hard_stop_ori_tol: 0.45
+      progress_hard_stop_surface_dist_tol: 0.035
+      progress_cruise_min_scale: 0.30
+      progress_cruise_quality_threshold: 0.90
+      progress_hard_stop_surface_reacquire_time: 0.15
+      progress_hard_stop_reacquire_time: 0.50
+      tool_axis_local: [0.0, 0.0, 1.0]
+      align_inward_normal: true
+      hold_current_roll: true
+      auto_pick_tool_axis_on_activate: false
+      seed_from_current_on_activate: false
+      seed_blend_time: 0.0
+
+    impedance:
+      k_trans: 250.0
+      d_trans: 40.0
+      k_rot: 30.0
+      d_rot: 6.0
+
+    paper:
+      k_s: [220.0, 220.0]
+      d_s: [34.0, 34.0]
+      k_d: 200.0
+      d_d: 50.0
+      k_eps: 24.0
+      d_eps: 5.0
+      d_max: 0.06
+      enable_curvature: true
+
+    nullspace:
+      enable: true
+      kp: 8.0
+      kd: 1.5
+      damping: 0.02
+
+    safety:
+      max_tau: 50.0
+      max_tau_rate: 50.0
+      switch_protection:
+        enable: true
+        hold_time: 0.05
+        blend_time: 0.35
+
+    joint_damping: 0.25
+
+    outer:
+      d_des: 0.0
+      k_outer_pos: 0.0
+    
+    sim:
+      gravity_scale: 0.0
+
+    surface:
+      type: hemisphere
+      hemisphere:
+        center: [0.65, 0.0, 0.02]
+        radius: 0.10 # 启用表面力反馈
+        axis: [0.0, 0.0, 1.0]

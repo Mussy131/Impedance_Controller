@@ -1,0 +1,10 @@
+build/
+install/
+log/
+debug/
+*.db3
+*.bag
+__pycache__/
+*.pyc
+.vscode/
+.idea/

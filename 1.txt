@@ -1,0 +1,132 @@
+# One-shot direct launch from Franka home pose:
+#   source /home/hchen82/ros2_ws/install/setup.bash
+#   ros2 launch franka_surface_impedance_controller gazebo_surface_scan_from_home.launch.py
+#   # This launch now defaults to a scan-specific TCP at tcp_xyz='0 0 0.142'
+#   # so the closed finger-tip collision boxes do not hit the 1 mm hemisphere shell first.
+#
+# =========================
+# Terminal 1: start Gazebo + joint_impedance_example_controller
+# =========================
+source /home/hchen82/ros2_ws/install/setup.bash
+export ROS_LOG_DIR=/tmp/ros_logs
+mkdir -p "$ROS_LOG_DIR"
+
+# Ensure KDL URDF exists for surface_impedance_controller
+FER_XACRO=$(ros2 pkg prefix --share franka_description)/robots/fer/fer.urdf.xacro
+ros2 run xacro xacro "$FER_XACRO" \
+  arm_id:=fer hand:=true ee_id:=franka_hand ros2_control:=true gazebo:=true gazebo_effort:=true lock_gripper_closed:=true tcp_xyz:='0 0 0.142' \
+  > /tmp/fer.urdf
+
+# NOTE: must use arm_id:=fer (your controller params use fer_joint1..7)
+ros2 launch franka_gazebo_bringup gazebo_joint_impedance_controller_example.launch.py \
+  arm_id:=fer load_gripper:=true franka_hand:=franka_hand lock_gripper_closed:=true tcp_xyz:='0 0 0.142'
+
+
+# =========================
+# Terminal 2: load/switch to surface_impedance_controller + RViz hemisphere/trajectory view
+# =========================
+source /home/hchen82/ros2_ws/install/setup.bash
+export ROS_LOG_DIR=/tmp/ros_logs
+
+ros2 param set /controller_manager surface_impedance_controller.use_franka_semantic false
+ros2 param set /controller_manager surface_impedance_controller.urdf_path /tmp/fer.urdf
+ros2 param set /controller_manager surface_impedance_controller.base_link fer_link0
+ros2 param set /controller_manager surface_impedance_controller.ee_link fer_hand_tcp
+ros2 param set /controller_manager surface_impedance_controller.debug.publish_state true
+ros2 param set /controller_manager surface_impedance_controller.debug.publish_markers true
+ros2 param set /controller_manager surface_impedance_controller.debug.publish_rate_hz 100.0
+
+# One-shot launch: spawn surface controller + Gazebo hemisphere + RViz markers config
+CFG=/home/hchen82/ros2_ws/src/franka_surface_impedance_controller/config/surface_impedance_controller.yaml
+ros2 launch franka_surface_impedance_controller spawn_surface_impedance_controller.launch.py \
+  controller_manager:=/controller_manager \
+  params_file:="$CFG" \
+  spawn_hemisphere:=true \
+  start_rviz:=true \
+  spawn_joint_state_broadcaster:=false \
+  spawn_franka_robot_state_broadcaster:=false \
+  spawn_surface_inactive:=true &
+
+# Wait for spawner to finish loading surface_impedance_controller (inactive)
+sleep 2
+
+# IMPORTANT:
+# Start Terminal 3 now and wait until rosbag reports that it is recording.
+# Then come back here and run the controller switch so the activation transient is captured.
+ros2 control switch_controllers \
+  --deactivate joint_impedance_example_controller \
+  --activate surface_impedance_controller \
+  --strict \
+  --activate-asap
+
+# Verify status
+ros2 control list_controllers
+
+
+# =========================
+# Terminal 3: capture debug data BEFORE switching controllers
+# =========================
+source /home/hchen82/ros2_ws/install/setup.bash
+export ROS_LOG_DIR=/tmp/ros_logs
+
+DBG_TS=$(date +%Y%m%d_%H%M%S)
+DBG_ROOT=/home/hchen82/ros2_ws/src/franka_surface_impedance_controller/debug
+DBG_DIR=$DBG_ROOT/surface_scan_debug_$DBG_TS
+mkdir -p "$DBG_DIR"
+echo "Debug output dir: $DBG_DIR"
+
+# Optional snapshots of runtime params / controller state before activation.
+ros2 control list_controllers > "$DBG_DIR/controllers_before_switch.txt"
+ros2 param dump /controller_manager > "$DBG_DIR/controller_manager_params.yaml"
+ros2 param dump /surface_impedance_controller > "$DBG_DIR/surface_impedance_controller_params.yaml"
+
+# debug_state field order:
+#   [00] scan_time
+#   [01] mode_code                0=hold, 1=paper_p, 2=cartesian_surface, 3=hemi_scan_cartesian, 4=paper_surface_scan
+#   [02] used_paper
+#   [03] have_surface
+#   [04] d_dbg
+#   [05:07] p                     current TCP position
+#   [08:10] p_d                   desired TCP position
+#   [11:13] n_dbg                 current surface normal
+#   [14:16] tool_axis_cur
+#   [17:19] tool_axis_des
+#   [20] tau_cmd_norm
+#   [21] normal_align_err_rad
+#   [22] scan_advance
+#   [23] scan_advance_scale
+#   [24] scan_surface_cmd_ratio
+#   [25] progress_hard_stop_active
+#   [26] paper_surface_acquired
+#   [27] seed_blend_active
+#   [28] paper_acquire_active
+#   [29] surface_err
+#   [30] surface_dist_err
+#   [31] surface_ori_err
+#   [32] cmd_ori_err
+#   [33] band_err
+#   [34] reacquire_reason         0=none, 1=surface, 2=band, 3=surface+band, 4=hard-stop
+#   [35] roll_err                 signed roll error about the commanded tool axis [rad]
+#   [36] roll_rate                angular velocity about the commanded tool axis [rad/s]
+
+# Human-readable stream for quick inspection.
+ros2 topic echo /surface_impedance_controller/debug_state > "$DBG_DIR/debug_state.txt" &
+DEBUG_STATE_PID=$!
+
+# Full-fidelity capture for postmortem. Start this before the Terminal 2 switch command.
+ros2 bag record \
+  -o "$DBG_DIR/bag" \
+  /clock \
+  /joint_states \
+  /dynamic_joint_states \
+  /tf \
+  /tf_static \
+  /parameter_events \
+  /rosout \
+  /surface_impedance_controller/debug_state \
+  /surface_impedance_controller/debug_markers \
+  /surface_impedance_controller/transition_event \
+  /joint_impedance_example_controller/transition_event
+
+# After rosbag exits with Ctrl-C, stop the plain-text echo as well.
+kill "$DEBUG_STATE_PID"
